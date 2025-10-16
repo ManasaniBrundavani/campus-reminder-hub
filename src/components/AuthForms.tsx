@@ -78,23 +78,40 @@ export const AuthForms = ({ onSuccess }: { onSuccess: () => void }) => {
     const formData = new FormData(e.currentTarget);
     const email = formData.get('email') as string;
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/`,
-    });
-
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message,
+    try {
+      // Generate password reset link
+      const { data, error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/`,
       });
-    } else {
+
+      if (resetError) throw resetError;
+
+      // Send custom email via our edge function
+      const { error: emailError } = await supabase.functions.invoke('send-password-reset', {
+        body: {
+          email,
+          resetLink: `${window.location.origin}/`, // Supabase will handle the actual reset token
+        },
+      });
+
+      if (emailError) {
+        console.error("Email sending error:", emailError);
+        // Still show success even if custom email fails, as Supabase sent the default email
+      }
+
       toast({
         title: "Check your email!",
         description: "We've sent you a password reset link.",
       });
       setShowForgotPassword(false);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
     }
+    
     setLoading(false);
   };
 
