@@ -6,10 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, Lock } from "lucide-react";
+import { Mail, Lock, ArrowLeft } from "lucide-react";
 
 export const AuthForms = ({ onSuccess }: { onSuccess: () => void }) => {
   const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const { toast } = useToast();
 
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -70,6 +71,33 @@ export const AuthForms = ({ onSuccess }: { onSuccess: () => void }) => {
     setLoading(false);
   };
 
+  const handleForgotPassword = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get('email') as string;
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/`,
+    });
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    } else {
+      toast({
+        title: "Check your email!",
+        description: "We've sent you a password reset link.",
+      });
+      setShowForgotPassword(false);
+    }
+    setLoading(false);
+  };
+
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
@@ -77,44 +105,82 @@ export const AuthForms = ({ onSuccess }: { onSuccess: () => void }) => {
         <CardDescription>Sign in to manage and view college events</CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="signin">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="signin">Sign In</TabsTrigger>
-            <TabsTrigger value="signup">Sign Up</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="signin">
-            <form onSubmit={handleSignIn} className="space-y-4">
+        {showForgotPassword ? (
+          <div className="space-y-4">
+            <Button
+              variant="ghost"
+              onClick={() => setShowForgotPassword(false)}
+              className="mb-2"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Sign In
+            </Button>
+            <form onSubmit={handleForgotPassword} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="signin-email" className="flex items-center gap-2">
+                <Label htmlFor="forgot-email" className="flex items-center gap-2">
                   <Mail className="h-4 w-4" />
                   Email
                 </Label>
                 <Input
-                  id="signin-email"
+                  id="forgot-email"
                   name="email"
                   type="email"
                   placeholder="your@email.com"
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="signin-password" className="flex items-center gap-2">
-                  <Lock className="h-4 w-4" />
-                  Password
-                </Label>
-                <Input
-                  id="signin-password"
-                  name="password"
-                  type="password"
-                  required
-                />
-              </div>
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Signing in..." : "Sign In"}
+                {loading ? "Sending..." : "Send Reset Link"}
               </Button>
             </form>
-          </TabsContent>
+          </div>
+        ) : (
+          <Tabs defaultValue="signin">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="signin">Sign In</TabsTrigger>
+              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="signin">
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signin-email" className="flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    Email
+                  </Label>
+                  <Input
+                    id="signin-email"
+                    name="email"
+                    type="email"
+                    placeholder="your@email.com"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signin-password" className="flex items-center gap-2">
+                    <Lock className="h-4 w-4" />
+                    Password
+                  </Label>
+                  <Input
+                    id="signin-password"
+                    name="password"
+                    type="password"
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Signing in..." : "Sign In"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="link"
+                  className="w-full"
+                  onClick={() => setShowForgotPassword(true)}
+                >
+                  Forgot Password?
+                </Button>
+              </form>
+            </TabsContent>
           
           <TabsContent value="signup">
             <form onSubmit={handleSignUp} className="space-y-4">
@@ -149,7 +215,8 @@ export const AuthForms = ({ onSuccess }: { onSuccess: () => void }) => {
               </Button>
             </form>
           </TabsContent>
-        </Tabs>
+          </Tabs>
+        )}
       </CardContent>
     </Card>
   );
