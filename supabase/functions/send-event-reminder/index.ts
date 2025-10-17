@@ -1,5 +1,5 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
-import { Resend } from "npm:resend@2.0.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -21,16 +21,16 @@ Deno.serve(async (req) => {
   try {
     console.log("Checking for events that need reminders...");
 
-    // Get current time and time 5 minutes from now
+    // Get current time and tomorrow
     const now = new Date();
-    const fiveMinutesLater = new Date(now.getTime() + 5 * 60000);
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60000);
 
-    // Find events that need reminders sent
+    // Find upcoming events
     const { data: events, error: eventsError } = await supabase
       .from("events")
       .select("*")
       .gte("start_time", now.toISOString())
-      .lte("start_time", fiveMinutesLater.toISOString());
+      .lte("start_time", tomorrow.toISOString());
 
     if (eventsError) throw eventsError;
 
@@ -39,12 +39,14 @@ Deno.serve(async (req) => {
     for (const event of events || []) {
       // Calculate when reminder should be sent
       const eventStartTime = new Date(event.start_time);
+      const reminderMinutes = event.reminder_minutes || 60;
       const reminderTime = new Date(
-        eventStartTime.getTime() - (event.reminder_minutes || 60) * 60000
+        eventStartTime.getTime() - reminderMinutes * 60000
       );
 
-      // Check if we're within the reminder window
-      if (now >= reminderTime && now <= eventStartTime) {
+      // Check if we should send reminder (within 2 minutes of reminder time or past it)
+      const timeDiff = now.getTime() - reminderTime.getTime();
+      if (timeDiff >= 0 && timeDiff <= 2 * 60000 && now <= eventStartTime) {
         // Check if reminder already sent
         const { data: existingReminder } = await supabase
           .from("event_reminders")
