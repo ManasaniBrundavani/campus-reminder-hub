@@ -1,5 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
-import { Resend } from "resend";
+import { createClient } from "npm:@supabase/supabase-js@2";
+import { Resend } from "npm:resend@2.0.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 

@@ -1,4 +1,4 @@
-import { Resend } from "resend";
+import { Resend } from "npm:resend@2.0.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
